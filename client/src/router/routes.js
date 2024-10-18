@@ -11,6 +11,7 @@ import UserMain from '@/components/user/UserMain'
 import ManageFolder from '@/components/user/manage-folder/ManageFolder'
 import ManageFile from '@/components/user/manage-file/ManageFile'
 import SearchPage from '@/components/user/chat/SearchPage'
+import IOTPage from '@/components/user/iot/IOTPage'
 
 // import ManageContent from '@/components/user/manage-content/ManageContent'
 // import ManageBroadcast from '@/components/user/manage-broadcast/ManageBroadcast'
@@ -58,6 +59,7 @@ const loggedUser = (to, from, next) => {
 
 const routes = [
 
+    { path: '/iot', component: IOTPage, name: 'IOTPage'},
     { path: '/login', component: UserLogin, name: 'UserLogin', beforeEnter: loggedUser },
     // { path: '/reset-password', component: UserResetPassword, name: 'UserResetPassword', beforeEnter: loggedUser },
     {
