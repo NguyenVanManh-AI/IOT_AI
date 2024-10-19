@@ -2,14 +2,14 @@
     <div style="color: white;">
         <div id="big">
             <div class="p-2 m-2">
-                <button type="button" class="btn btn-outline-primary m-2" @click="handleFanOn"><i
-                        class="fa-solid fa-check"></i> ON FAN</button>
-                <button type="button" class="btn btn-outline-primary m-2" @click="handleFanOff"><i
-                        class="fa-solid fa-xmark"></i> OFF FAN</button>
-                <button type="button" class="btn btn-outline-primary m-2" @click="handleLedOn"><i
-                        class="fa-solid fa-check"></i> ON LED</button>
-                <button type="button" class="btn btn-outline-primary m-2" @click="handleLedOff"><i
-                        class="fa-solid fa-xmark"></i> OFF LED</button>
+                <button type="button" class="btn btn-primary m-2" @click="toggleFan">
+                    <i class="fa-solid" :class="isFanOn ? 'fa-xmark' : 'fa-check'"></i>
+                    {{ isFanOn ? 'OFF FAN' : 'ON FAN' }}
+                </button>
+                <button type="button" class="btn btn-primary m-2" @click="toggleLed">
+                    <i class="fa-solid" :class="isLedOn ? 'fa-xmark' : 'fa-check'"></i>
+                    {{ isLedOn ? 'OFF LED' : 'ON LED' }}
+                </button>
             </div>
             <audio style="display: none;" ref="audioPlayer" controls></audio>
         </div>
@@ -37,6 +37,8 @@ export default {
             mediaRecorder: null,
             audioChunks: [],
             isRecording: false,
+            isFanOn: false,
+            isLedOn: false,
             // selectedFile: null,
             // record: {
             //     id_folder: null,
@@ -136,17 +138,13 @@ export default {
                 console.error("Không thể kết nối đến ESP8266:", error);
             }
         },
-        handleFanOn() {
-            this.sendMotorCommand(1); // Bật quạt
+        toggleFan() {
+            this.isFanOn = !this.isFanOn;
+            this.sendMotorCommand(this.isFanOn ? 1 : 2); // 1: Bật FAN, 2: Tắt FAN
         },
-        handleFanOff() {
-            this.sendMotorCommand(2); // Tắt quạt
-        },
-        handleLedOn() {
-            this.sendMotorCommand(3); // Bật đèn LED
-        },
-        handleLedOff() {
-            this.sendMotorCommand(4); // Tắt đèn LED
+        toggleLed() {
+            this.isLedOn = !this.isLedOn;
+            this.sendMotorCommand(this.isLedOn ? 3 : 4); // 3: Bật LED, 4: Tắt LED
         }
     },
     watch: {
