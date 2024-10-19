@@ -2,10 +2,14 @@
     <div style="color: white;">
         <div id="big">
             <div class="p-2 m-2">
-                <button type="button" class="btn btn-outline-primary m-2"><i class="fa-solid fa-check"></i> ON FAN   </button>
-                <button type="button" class="btn btn-outline-primary m-2"><i class="fa-solid fa-xmark"></i> OFF FAN   </button>
-                <button type="button" class="btn btn-outline-primary m-2"><i class="fa-solid fa-check"></i> ON LED   </button>
-                <button type="button" class="btn btn-outline-primary m-2"><i class="fa-solid fa-xmark"></i> OFF LED   </button>
+                <button type="button" class="btn btn-outline-primary m-2" @click="handleFanOn"><i
+                        class="fa-solid fa-check"></i> ON FAN</button>
+                <button type="button" class="btn btn-outline-primary m-2" @click="handleFanOff"><i
+                        class="fa-solid fa-xmark"></i> OFF FAN</button>
+                <button type="button" class="btn btn-outline-primary m-2" @click="handleLedOn"><i
+                        class="fa-solid fa-check"></i> ON LED</button>
+                <button type="button" class="btn btn-outline-primary m-2" @click="handleLedOff"><i
+                        class="fa-solid fa-xmark"></i> OFF LED</button>
             </div>
             <audio style="display: none;" ref="audioPlayer" controls></audio>
         </div>
@@ -109,45 +113,41 @@ export default {
                 console.error("Failed to upload audio:", error);
             }
         },
-        // handleFileUpload(event) {
-        //     this.record.file = event.target.files[0];
-        // },
-        // addRecord: async function () {
-        //     this.errors = {
-        //         id_folder: null,
-        //         file: null,
-        //     }
-        //     if(this.record.file === null) {
-        //         this.errors.file = 'File is required !'
-        //     } else if(this.record.id_folder === null) {
-        //         this.errors.id_folder = 'Folder selection is required !'
-        //     } else {
-        //         try {
-        //             const formData = new FormData();
-        //             for (let key in this.record) formData.append(key, this.record[key]);
+        async sendMotorCommand(option) {
+            const url = "http://192.168.100.150/sendOption"; // Địa chỉ IP của ESP8266
+            const data = new URLSearchParams();
+            data.append("option", option);
 
-        //             await UserRequest.post('file/add/', formData, true);
-        //             this.$emitEvent('eventSuccess', 'File added successfully !');
-        //             var closePW = window.document.getElementById('addRecord');
-        //             closePW.click();
-        //             this.$refs.fileInput.value = '';
-        //             this.record = {
-        //                 id_folder: null,
-        //                 file: null,
-        //             };
-        //             this.errors = {
-        //                 id_folder: null,
-        //                 file: null,
-        //             }
-        //             this.$emitEvent('eventRegetDataRecords', '');
-        //         }
-        //         catch (error) {
-        //             this.errors.file = 'Error name.'
-        //             console.log(error);
-        //             this.$emitEvent('eventError', 'Error something !');
-        //         }
-        //     }
-        // },
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: data.toString(),
+                });
+
+                if (response.ok) {
+                    console.log("Gửi thành công, Động cơ đã được điều khiển theo tùy chọn:", option);
+                } else {
+                    console.error("Có lỗi xảy ra khi gửi yêu cầu:", response.status);
+                }
+            } catch (error) {
+                console.error("Không thể kết nối đến ESP8266:", error);
+            }
+        },
+        handleFanOn() {
+            this.sendMotorCommand(1); // Bật quạt
+        },
+        handleFanOff() {
+            this.sendMotorCommand(2); // Tắt quạt
+        },
+        handleLedOn() {
+            this.sendMotorCommand(3); // Bật đèn LED
+        },
+        handleLedOff() {
+            this.sendMotorCommand(4); // Tắt đèn LED
+        }
     },
     watch: {
 
