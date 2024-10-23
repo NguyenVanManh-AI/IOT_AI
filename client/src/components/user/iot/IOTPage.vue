@@ -116,7 +116,7 @@ export default {
             }
         },
         async sendMotorCommand(option) {
-            const url = "http://192.168.100.150/sendOption"; // Địa chỉ IP của ESP8266
+            const url = "http://192.168.162.168/sendOption"; // Địa chỉ IP của ESP8266
             const data = new URLSearchParams();
             data.append("option", option);
 

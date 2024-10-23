@@ -1,157 +1,319 @@
 <template>
-  <div>
-    <template :class="{ loading: true, hide: !isLoading, show: isLoading }">
-      <breeding-rhombus-spinner class="loading-component" :animation-duration="2000" :size="65" color="#0680C7" />
-      <div id="titleLoading">
-         <i class="fa-solid fa-graduation-cap"></i> Knowledge
+  <div style="color: white;">
+    <div id="big">
+      <div class="p-2 m-2">
+        <button type="button" class="btn btn-primary m-2" @click="toggleFan">
+          <i class="fa-solid" :class="isFanOn ? 'fa-xmark' : 'fa-check'"></i>
+          {{ isFanOn ? 'OFF FAN' : 'ON FAN' }}
+        </button>
+        <button type="button" class="btn btn-primary m-2" @click="toggleLed">
+          <i class="fa-solid" :class="isLedOn ? 'fa-xmark' : 'fa-check'"></i>
+          {{ isLedOn ? 'OFF LED' : 'ON LED' }}
+        </button>
       </div>
-    </template>
-    <template id="appMain" :class="{ hide: isLoading, show: !isLoading }">
-      <router-view></router-view>
-      <CommonNotification></CommonNotification>
-    </template>
+      <audio style="display: none;" ref="audioPlayer" controls></audio>
+    </div>
+    <div>
+      <div class="mic" :class="{ 'active-mic': isRecording }" style="color: white;" @click="toggleRecording">
+        <span><i class="mic-icon"></i></span>
+        <div v-if="isRecording" class="mic-shadow"></div>
+      </div>
+    </div>
   </div>
 </template>
-<script>
 
-import CommonNotification from '@/components/common/CommonNotification'
-import { BreedingRhombusSpinner } from 'epic-spinners';
-import useEventBus from '@/composables/useEventBus'
-const { onEvent } = useEventBus()
+<script>
+// import UserRequest from '@/restful/UserRequest';
 
 export default {
-  name: 'App',
-  components: {
-    CommonNotification,
-    BreedingRhombusSpinner
+  name: "IOTPage",
+  props: {
   },
   setup() {
-    document.title = "Knowledge";
+
   },
   data() {
     return {
-      isLoading: false,
+      mediaRecorder: null,
+      audioChunks: [],
+      isRecording: false,
+      isFanOn: false,
+      isLedOn: false,
+      // selectedFile: null,
+      // record: {
+      //     id_folder: null,
+      //     file: null,
+      // },
+      // errors: {
+      //     id_folder: null,
+      //     file: null,
+      // }
     }
   },
   mounted() {
-    onEvent('eventLoading', (isLoading) => {
-      this.isLoading = isLoading;
-    })
+  },
+  components: {
+  },
+  computed: {
+  },
+  methods: {
+    async toggleRecording() {
+      if (this.isRecording) {
+        this.stopRecording();
+      } else {
+        await this.startRecording();
+      }
+    },
+    async startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.mediaRecorder = new MediaRecorder(stream);
+
+        this.mediaRecorder.start();
+        this.audioChunks = [];
+        this.isRecording = true; // Đặt trạng thái ghi âm
+
+        this.mediaRecorder.ondataavailable = (event) => {
+          this.audioChunks.push(event.data);
+        };
+
+        console.log("Recording started...");
+      } catch (error) {
+        console.error("Microphone access denied or not supported.", error);
+      }
+    },
+    stopRecording() {
+      if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+        this.mediaRecorder.stop();
+
+        this.mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(this.audioChunks, { type: "audio/wav" });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          this.$refs.audioPlayer.src = audioUrl;
+          this.uploadAudio(audioBlob);
+          this.isRecording = false; // Đặt trạng thái ghi âm về false
+          console.log("Recording stopped.");
+        };
+      }
+    },
+    async uploadAudio(audioBlob) {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.wav");
+
+      try {
+        const response = await fetch("http://localhost:8000/api/upload-audio/", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log("Response from server:", result.message);
+        } else {
+          console.error("Error uploading audio:", response.status);
+        }
+      } catch (error) {
+        console.error("Failed to upload audio:", error);
+      }
+    },
+    async sendMotorCommand(option) {
+      const url = "http://192.168.162.168/sendOption"; // Địa chỉ IP của ESP8266
+      const data = new URLSearchParams();
+      data.append("option", option);
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: data.toString(),
+        });
+
+        if (response.ok) {
+          console.log("Gửi thành công, Động cơ đã được điều khiển theo tùy chọn:", option);
+        } else {
+          console.error("Có lỗi xảy ra khi gửi yêu cầu:", response.status);
+        }
+      } catch (error) {
+        console.error("Không thể kết nối đến ESP8266:", error);
+      }
+    },
+    toggleFan() {
+      this.isFanOn = !this.isFanOn;
+      this.sendMotorCommand(this.isFanOn ? 1 : 2); // 1: Bật FAN, 2: Tắt FAN
+    },
+    toggleLed() {
+      this.isLedOn = !this.isLedOn;
+      this.sendMotorCommand(this.isLedOn ? 3 : 4); // 3: Bật LED, 4: Tắt LED
+    }
   },
   watch: {
 
-  }
+  },
 }
 </script>
-<style >
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+<style scoped>
+/* image upload */
+.big-container-image {
+  display: flex;
+  align-items: center;
+  align-content: center;
+  /* height: 100%; */
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
-li {
-  list-style: none;
-}
-
-a {
-  text-decoration: none;
-}
-
-body {
-  background-color: #F0F2F5 !important;
-}
-
-:root {
-  --user-color: #0680c7;
-  --admin-color: #06C755;
-  --blue-color: #007BFF;
-  --brown-color: #8B4513;
-  --yellow-color: #c0b01d;
-  --btn-hover: 0px 15px 20px #8fbefb;
-}
-
-::-webkit-scrollbar {
-  width: 13px;
-}
-
-::-webkit-scrollbar-track {
-  background: white;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
-  border: 3px solid transparent;
-  background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--user-color);
-  border-radius: 10px;
-  border: 3px solid transparent;
-  background-clip: content-box;
-}
-
-#view {
-  display: grid;
+.inner-image-upload {
+  height: 50%;
   width: 100%;
-  overflow-y: scroll;
 }
 
-#view::-webkit-scrollbar {
-  display: none;
-}
-
-#view {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.modal-open .modal {
-  background-color: #0000008a;
-}
-
-.btn {
-  outline: none;
-}
-
-button {
-  outline: none !important;
-}
-
-.loading-component {
-  margin: auto;
-  margin-top: 300px;
-}
-
-#titleLoading {
-  margin-top: 25px;
+.min-image-upload {
+  background-color: #e9ecef;
+  position: relative;
   text-align: center;
-  font-weight: bold;
+  /* width: 170px; */
+  height: 170px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.5s ease;
+  width: 100%;
+}
+
+.min-image-upload .preview {
+  /* width: 150px; */
+  height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: default;
+  width: 100%;
+}
+
+.min-image-upload:hover {
+  transition: all 0.5s ease;
+  background: #E8F5E9;
+}
+
+.input-file {
+  opacity: 0;
+  top: 0px;
+  left: 0px;
+  position: absolute;
+  cursor: pointer;
+  /* width: 150px; */
+  height: 150px;
+  width: 100%;
+}
+
+.box-preview {
+  position: relative;
+}
+
+.iconClound {
+  cursor: pointer;
+  font-size: 60px;
   color: var(--user-color);
 }
 
-#titleLoading {
-  animation: titleLoading 2s linear infinite;
+.close-img {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
 }
 
-@keyframes titleLoading {
-  50% {
-    opacity: 0;
-  }
+/* image upload */
+
+
+/*  */
+.modal-dialog {
+  max-width: 800px;
 }
 
-.hide {
-  display: none;
+/*  */
+
+
+.modal.fade.show {
+  padding-left: 0px;
 }
 
-.show {
-  display: block;
+.modal-content {
+  /* margin-top: 100px; */
+  border-radius: 10px;
+}
+
+.bigContainer .input-form {
+  height: 40px;
+  width: 100%;
+  position: relative;
+}
+
+.bigContainer .input-form input {
+  height: 100%;
+  width: 100%;
+  border: none;
+  font-size: 17px;
+  border-bottom: 2px solid silver;
+  outline: none !important;
+}
+
+.input-form input:focus~label,
+.input-form input:valid~label {
+  transform: translateY(-20px);
+  font-size: 15px;
+  color: var(--user-color);
+}
+
+.input-form .underline.fix2:before {
+  position: absolute;
+  content: "";
+  height: 100%;
+  width: 100%;
+  background: var(--user-color);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+
+.bigContainer .input-form label {
+  position: absolute;
+  bottom: 0px;
+  left: 0;
+  color: grey;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.input-form .underline {
+  position: absolute;
+  height: 2px;
+  width: 100%;
+  bottom: 0;
+}
+
+.input-form .underline:before {
+  position: absolute;
+  content: "";
+  height: 100%;
+  width: 100%;
+  background: var(--user-color);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+
+.input-form input:focus~.underline:before,
+.input-form input:valid~.underline:before {
+  transform: scaleX(1);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Reem+Kufi+Ink');
+
+#big {
+  display: flex;
+  position: relative;
 }
 
 .btn-pers {
@@ -175,8 +337,7 @@ button {
 
 .btn-pers:hover {
   background-color: var(--user-color);
-  /* box-shadow: 0px 15px 20px #80ffb5; */
-	box-shadow: var(--btn-hover);
+  box-shadow: var(--btn-hover);
   color: #fff;
   transform: translate(-50%, -7px);
 }
@@ -185,45 +346,8 @@ button {
   transform: translate(-50%, -1px);
 }
 
-button.close span {
-  color: black !important;
-  transition: color 0.5s ease !important;
+#inputPassword {
+  padding-right: 26px;
 }
-
-button.close:hover span {
-  color: red !important;
-  transition: color 0.5s ease !important;
-}
-
-.color-header {
-  color: var(--user-color);
-}
-
-
-/* Upload file */
-.close-img {
-    position: absolute;
-    top: -6px;
-    left: 6px;
-    width: 16px;
-    cursor: pointer;
-}
-
-.container-file-default {
-    position: relative;
-}
-/* Upload file */
-
-.uppercase {
-  text-transform: uppercase;
-}
-
-.bold {
-  font-weight: bold;
-}
-
-.fw-500 {
-  font-weight: 500;
-}
-
 </style>
+<style src="@/components/user/iot/voice.css"></style>
