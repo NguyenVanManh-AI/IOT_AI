@@ -2,6 +2,9 @@ import requests
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
 @api_view(['POST'])
 def MakeDecision(request):
     # Kiểm tra xem có file 'audio' trong request hay không
@@ -9,23 +12,34 @@ def MakeDecision(request):
     if not audio_file:
         return Response({"status": "failure", "error": "Missing 'audio' file in request"}, status=400)
 
-    try:
-        # Gửi file đến API bên ngoài
-        response = requests.post(
-            "https://5ea5-35-243-255-223.ngrok-free.app/transcribe",
-            files={'file': audio_file}
-        )
+    # Nếu có file, in ra thông báo thành công
+    return Response({"status": "success", "message": "Received audio file successfully"}, status=200)
 
-        # Kiểm tra nếu yêu cầu thành công
-        if response.status_code == 200:
-            # Lấy giá trị 'transcription' từ phản hồi
-            transcription = response.json().get('transcription', '')
-            return Response({"status": "success", "transcription": transcription})
-        else:
-            return Response({"status": "failure", "error": "Failed to transcribe audio"}, status=response.status_code)
-    except requests.RequestException as e:
-        # Xử lý lỗi kết nối hoặc yêu cầu
-        return Response({"status": "failure", "error": str(e)}, status=500)
+
+# @api_view(['POST'])
+# def MakeDecision(request):
+#     # Kiểm tra xem có file 'audio' trong request hay không
+#     audio_file = request.FILES.get('audio')
+#     if not audio_file:
+#         return Response({"status": "failure", "error": "Missing 'audio' file in request"}, status=400)
+
+#     try:
+#         # Gửi file đến API bên ngoài
+#         response = requests.post(
+#             "https://5ea5-35-243-255-223.ngrok-free.app/transcribe",
+#             files={'file': audio_file}
+#         )
+
+#         # Kiểm tra nếu yêu cầu thành công
+#         if response.status_code == 200:
+#             # Lấy giá trị 'transcription' từ phản hồi
+#             transcription = response.json().get('transcription', '')
+#             return Response({"status": "success", "transcription": transcription})
+#         else:
+#             return Response({"status": "failure", "error": "Failed to transcribe audio"}, status=response.status_code)
+#     except requests.RequestException as e:
+#         # Xử lý lỗi kết nối hoặc yêu cầu
+#         return Response({"status": "failure", "error": str(e)}, status=500)
 
 
     # if not audio_file:
